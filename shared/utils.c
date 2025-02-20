@@ -523,7 +523,8 @@ uint64_t IP_fault_skip (op_t fault_op, uint64_t tmp,uint64_t size)
     switch (fault_op)
     {   
         case eSKIP_op:
-            if (binary_file_details->my_uc_arch == UC_ARCH_ARM  || binary_file_details->my_uc_arch == UC_ARCH_ARM64)   
+            if ((binary_file_details->my_uc_arch == UC_ARCH_ARM  || binary_file_details->my_uc_arch == UC_ARCH_ARM64) &&
+                binary_file_details->my_uc_mode == UC_MODE_THUMB)
             {
             return tmp+size+1;
             }

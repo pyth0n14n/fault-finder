@@ -44,7 +44,7 @@ void hook_code_fault_it_register(uc_engine *uc, uint64_t address, uint64_t size,
     fault_address=thumb_check_address(fault_address);
 
     #ifdef DEBUG
-            printf_debug("hook_code_fault_it_register. Address 0x%" PRIx64 ". Count: %li\n", address, current_run_state->instruction_count);
+            printf_debug("hook_code_fault_it_register. Address 0x%" PRIx64 ". Count: %li, size %ld\n", address, current_run_state->instruction_count, size);
     #endif
 
     // If we want to fault AFTER the instruction then we need to skip this once.

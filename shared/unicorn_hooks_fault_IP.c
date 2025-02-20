@@ -18,6 +18,7 @@ void do_the_IP_fault(uc_engine* uc, current_run_state_t* current_run_state,uint6
 
     fprintf_output(current_run_state->file_fprintf, "Fault Address                  :  0x%" PRIx64 "\n",address);
     fprintf_output(current_run_state->file_fprintf, "Original IP                    :  0x%" PRIx64 "\n",pc_value);
+    fprintf_output(current_run_state->file_fprintf, "Instruction size               :  0x%" PRIx64 "\n",size);
 
     //fault it
     pc_value=IP_fault_skip(current_run_state->fault_rule.operation, pc_value, size);
