@@ -47,6 +47,7 @@ void hook_lifespan_repeat_IP(uc_engine *uc, uint64_t address, uint64_t size, voi
 
     if (this_fault->instruction == current_run_state->instruction_count )
     {
+        fprintf_output(current_run_state->file_fprintf,"UNLEACHABLE: this_fault->instruction: %llu, instruction_count %llu\n", fault_at_instruction, current_run_state->instruction_count);
         return;         // The repeated faults start AFTER the faulted address.
     }
     fprintf_output(current_run_state->file_fprintf,"Lifespan skip repeat countdown: %llu. (0x%" PRIx64 ") %" PRId64 "\n",this_fault->lifespan.count,address,current_run_state->instruction_count);
@@ -85,13 +86,6 @@ void hook_code_fault_it_IP(uc_engine *uc, uint64_t address, uint64_t size, void 
         // only fault the specific instruction
         return;
     }
-    do_the_IP_fault(uc, current_run_state,address,size);
-
-    // Check for equivalences
-    if (current_run_state->stop_on_equivalence)
-    {
-        my_uc_hook_add("hk_equivalent", uc, &current_run_state->hk_equivalent, UC_HOOK_CODE, hook_code_equivalent, current_run_state, 1, 0);
-    }
 
     fault_rule_t *this_fault=&current_run_state->fault_rule;
     if (this_fault->lifespan.count != 0)
@@ -105,6 +99,16 @@ void hook_code_fault_it_IP(uc_engine *uc, uint64_t address, uint64_t size, void 
         {
             fprintf_output(current_run_state->file_fprintf, "Note: repeating this fault %llu times.\n",this_fault->lifespan.count);
             my_uc_hook_add("hk_fault_lifespan(IP)", uc, &current_run_state->hk_fault_lifespan, UC_HOOK_CODE, hook_lifespan_repeat_IP, current_run_state, address, address);
+        }
+    }
+    else
+    {
+        do_the_IP_fault(uc, current_run_state,address,size);
+
+        // Check for equivalences
+        if (current_run_state->stop_on_equivalence)
+        {
+            my_uc_hook_add("hk_equivalent", uc, &current_run_state->hk_equivalent, UC_HOOK_CODE, hook_code_equivalent, current_run_state, 1, 0);
         }
     }
 
