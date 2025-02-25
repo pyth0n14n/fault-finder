@@ -6,6 +6,11 @@
     #include "configuration.h"
     #include <unicorn/unicorn.h>
 
+    typedef union {
+        uint32_t word;    // 32-bit access
+        uint8_t bytes[4]; // 8-bit access
+    } memory_entry_t;
+
     // //unicorn architecutre and modes
     void uc_restore_from_checkpoint(uc_engine *uc, current_run_state_t* current_run_state, uint64_t instr);
     void print_outputs(uc_engine *uc, current_run_state_t* current_run_state);
