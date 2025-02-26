@@ -122,6 +122,9 @@
         uint64_t code_end_address;
         uint64_t fault_start_address;
         uint64_t fault_end_address;
+        uint64_t rewrite_start_address;
+        uint64_t rewrite_end_address;
+        uint64_t rewrite_unit;  // 4: word, 2: half-word
         overwrite_memory_t* set_memory;
         uint64_t set_memory_count;
         overwrite_register_t* set_registers;

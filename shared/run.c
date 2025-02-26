@@ -116,6 +116,11 @@ void print_stats(current_run_state_t *current_run_state)
     printf("\n");
     printf_output("Start faults at address:     0x%08llx\n", binary_file_details->fault_start_address);
     printf_output("End faults at address:       0x%08llx\n\n", binary_file_details->fault_end_address);
+
+    printf_output("Start GOT rewrite address:     0x%08llx\n", binary_file_details->rewrite_start_address);
+    printf_output("End GOT rewrite address:       0x%08llx\n", binary_file_details->rewrite_end_address);
+    printf_output("GOT rewrite unit:       %d\n\n", binary_file_details->rewrite_unit);
+
     printf_output("Printing usage of registers: \n");
 
     //print the register info

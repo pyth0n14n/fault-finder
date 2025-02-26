@@ -931,6 +931,46 @@ void get_filter_results(struct json_object* parsed_json)
     
 }
 
+void get_memory_rewrite_offset(struct json_object* parsed_json)
+{
+    struct json_object *memory_rewrite_offset=NULL;
+
+    json_object_object_get_ex(parsed_json,"memory rewrite offset",&memory_rewrite_offset);
+    if (memory_rewrite_offset == NULL)
+    {
+        fprintf(stderr,"No memory rewrite.\n");
+        return;
+    }
+
+    struct json_object *start_address=NULL;
+    struct json_object *end_address=NULL;
+    struct json_object *offset_unit=NULL;
+
+    // MEMO: can be multiple declaration, but now hard-coded into a single one
+    memory_rewrite_offset = json_object_array_get_idx(memory_rewrite_offset,0);
+
+    json_object_object_get_ex(memory_rewrite_offset, "start address", &start_address);
+    if (start_address == NULL) {
+        fprintf(stderr, "Error: Missing 'start address' in 'memory rewrite offset'.\n");
+        my_exit(-1);
+    }
+    internal_binary_file_details.rewrite_start_address = strtol(json_object_get_string(start_address), NULL, 0);
+
+    json_object_object_get_ex(memory_rewrite_offset, "end address", &end_address);
+    if (end_address == NULL) {
+        fprintf(stderr, "Error: Missing 'end address' in 'memory rewrite offset'.\n");
+        my_exit(-1);
+    }
+    internal_binary_file_details.rewrite_end_address = strtol(json_object_get_string(end_address), NULL, 0);
+
+    json_object_object_get_ex(memory_rewrite_offset, "offset unit", &offset_unit);
+    if (offset_unit == NULL) {
+        fprintf(stderr, "Error: Missing 'offset unit' in 'memory rewrite offset'.\n");
+        my_exit(-1);
+    }
+    internal_binary_file_details.rewrite_unit = strtol(json_object_get_string(offset_unit), NULL, 0);    
+}
+
 void load_configuration(const char* json_binary_filename)
 {
   FILE *fp = 0;
@@ -1005,6 +1045,11 @@ void load_configuration(const char* json_binary_filename)
      *      OUTPUS
      ********************************/
     get_outputs(parsed_json);
+
+    /********************************
+     *   memory rewrite offset
+     ********************************/
+    get_memory_rewrite_offset(parsed_json);
 
     /********************************
      *  SKIP ADDRESSES & SKIP BYTES

@@ -369,22 +369,23 @@ void uc_engine_load_code_into_memory(uc_engine *uc, const char *code_buffer, siz
     }
 }
 
-void uc_engine_rewrite_got(uc_engine *uc, uint64_t offset, uint64_t start_address, uint64_t end_address, current_run_state_t *current_run_state)
+void uc_engine_rewrite_got(uc_engine *uc, current_run_state_t *current_run_state)
 {
+    uint64_t start_address = binary_file_details->rewrite_start_address;
+    uint64_t end_address = binary_file_details->rewrite_end_address;
+    uint64_t offset_unit = binary_file_details->rewrite_unit;
+    // MEMO: offset can be an arbitrary value if required
+    uint64_t offset = binary_file_details->memory_main.address;
+    size_t len = end_address - start_address;
+
     #ifdef DEBUG
     printf_debug("Rewrite GOT:\n");
     printf_debug("memory address: 0x%" PRIx64 "~0x%" PRIx64 "\n", start_address, end_address);
-    printf_debug("offset = memory_main.address: 0x%" PRIx64 "\n",binary_file_details->memory_main.address);
+    printf_debug("offset = memory_main.address: 0x%" PRIx64 "\n",offset);
     #endif
-    
-    FILE* f = current_run_state->file_fprintf;
-    // For Debug: fixed values
-    start_address = 0x00401fb8;
-    end_address = 0x00402000;
-    offset = binary_file_details->memory_main.address;
-    uint64_t size_byte = 4;
 
-    size_t len = end_address - start_address;
+    FILE* f = current_run_state->file_fprintf;
+
     memory_entry_t *buf = (memory_entry_t*)my_malloc(sizeof(size_t) * len, "Rewrite GOT");
 
     uc_err err=uc_mem_read(uc, start_address, (uint8_t*)buf, (uint64_t)len);
@@ -401,11 +402,12 @@ void uc_engine_rewrite_got(uc_engine *uc, uint64_t offset, uint64_t start_addres
     printf_debug("uc_engine_rewrite_got: memory read check\n");
     for (uint64_t i = 0; i < len / sizeof(memory_entry_t); i++)
     {
-        printf_debug("%08x: %08x\n", start_address+i*size_byte, buf[i].word);
+        printf_debug("%08x: %08x\n", start_address+i*offset_unit, buf[i].word);
     }
     #endif
 
-    // applying offset by byte-order
+    // TODO: hard-coded as word unit
+    // applying offset by word unit
     for (uint64_t i = 0; i < len / sizeof(memory_entry_t); i++)
     {
         buf[i].word += offset;
@@ -419,6 +421,8 @@ void uc_engine_rewrite_got(uc_engine *uc, uint64_t offset, uint64_t start_addres
         my_exit(-1);
     }
 
+    #ifdef DEBUG
+    // READ after WRITE
     err=uc_mem_read(uc, start_address, (uint8_t*)buf, (uint64_t)len);
     if (err != UC_ERR_OK)
     {
@@ -427,12 +431,10 @@ void uc_engine_rewrite_got(uc_engine *uc, uint64_t offset, uint64_t start_addres
         my_exit(-1);
     }
 
-    #ifdef DEBUG
-    // READ test 2
     printf_debug("uc_engine_rewrite_got: memory read check after applying offset\n");
     for (uint64_t i = 0; i < len / sizeof(memory_entry_t); i++)
     {
-        printf_debug("%08x: %08x\n", start_address+i*size_byte, buf[i].word);
+        printf_debug("%08x: %08x\n", start_address+i*offset_unit, buf[i].word);
     }
     #endif
 
@@ -781,7 +783,7 @@ void my_uc_engine_setup(uc_engine **uc, current_run_state_t* current_run_state,c
     uc_engine_create_hooks(*uc,current_run_state);
     uc_engine_load_code_into_memory(*uc, binary_file_details->code_buffer ,binary_file_details->code_buffer_size);
     uc_engine_insert_patches(*uc,current_run_state);
-    uc_engine_rewrite_got(*uc, 0, 0, 0, current_run_state);
+    uc_engine_rewrite_got(*uc, current_run_state);
 
     uc_engine_set_memory_inputs(*uc, current_run_state);  
     uc_engine_set_new_register_inputs(*uc, current_run_state);  
