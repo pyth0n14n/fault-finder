@@ -43,6 +43,40 @@ void hook_min_max_mod (uc_engine *uc, uint64_t address, uint64_t size, void *use
     }
 
 }
+
+void hook_stack_access(uc_engine *uc, uc_mem_type type, uint64_t address, int size, int64_t value, void *user_data)
+{
+    #ifdef DEBUG
+        printf_debug("hook_stack_access. Address: %" PRIx64 "\n",address);
+    #endif
+    current_run_state_t *current_run_state = (current_run_state_t *)user_data;
+    uint64_t sp_value = 0;
+
+    // monitor access to stack region
+    if (address >= binary_file_details->stack.address &&
+        address < (binary_file_details->stack.address + binary_file_details->stack.size))
+    {
+        // #ifdef DEBUG
+        // printf_debug("hook_stack_access. current sp (%llu) vs. new sp (%llu): \n", current_run_state->min_sp_value, sp_value);
+        // #endif
+        // update minimum/maximum address in stack region
+        if (address < current_run_state->min_sp_value)
+        {
+    #ifdef DEBUG
+            printf_debug("New min address: 0x%" PRIx64 "<- 0x%" PRIx64 "\n", address, current_run_state->min_sp_value);
+    #endif
+            current_run_state->min_sp_value = address;
+        }
+        else if (address > current_run_state->max_sp_value) {
+    #ifdef DEBUG
+            printf_debug("New max address: 0x%" PRIx64 "<- 0x%" PRIx64 "\n", address, current_run_state->max_sp_value);
+    #endif
+            current_run_state->max_sp_value = address;
+        }
+    }
+}
+
+
 void delete_hook_count_instructions(uc_engine *uc, current_run_state_t *current_run_state)
 {
     // DELETE the counting hook

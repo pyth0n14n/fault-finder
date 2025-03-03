@@ -32,6 +32,7 @@
     void hook_count_instructions            (uc_engine *uc, uint64_t address, uint64_t size, void *user_data);
     void hook_placebo                       (uc_engine *uc, uint64_t address, uint64_t size, void *user_data);
     void hook_min_max_mod                   (uc_engine *uc, uint64_t address, uint64_t size, void *user_data);
+    void hook_stack_access                  (uc_engine *uc, uc_mem_type type, uint64_t address, int size, int64_t value, void *user_data);
     void hook_code_skips                    (uc_engine *uc, uint64_t address, uint64_t size, void *user_data);
      // printing hooks
     void hook_code_print_instructions       (uc_engine *uc, uint64_t address, uint64_t size, void *user_data);

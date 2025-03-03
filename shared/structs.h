@@ -142,6 +142,8 @@
         address_hit_counter_t* address_hit_counter;
         address_and_disassembly_t* addresses_and_disassembly_from_file;
         uint64_t addresses_and_disassembly_from_file_count;
+        uint64_t min_sp_value;
+        uint64_t max_sp_value;
     } current_run_state_t;
 
     typedef struct _operation_fault_t

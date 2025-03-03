@@ -489,6 +489,8 @@ void current_run_state_init(current_run_state_t* current_run_state)
     current_run_state->restart_address=0;
     current_run_state->addresses_and_disassembly_from_file=0;
     current_run_state->addresses_and_disassembly_from_file_count=0;
+    current_run_state->min_sp_value=0;
+    current_run_state->max_sp_value=0;
 }
 
 void current_run_state_reset(current_run_state_t* current_run_state)
@@ -503,6 +505,8 @@ void current_run_state_reset(current_run_state_t* current_run_state)
     current_run_state->in_fault_range=0;
     current_run_state->last_address=0;
     current_run_state->run_state=NONE_rs;
+    current_run_state->min_sp_value=binary_file_details->stack_start_address;
+    current_run_state->max_sp_value=binary_file_details->stack_start_address;
 }
 
 

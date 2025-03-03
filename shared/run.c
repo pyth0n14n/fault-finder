@@ -406,15 +406,25 @@ void goldenrun_full_it (current_run_state_t* current_run_state)
     current_run_state_reset(current_run_state); 
     current_run_state->run_mode=eGOLDENRUN_FULL_rm;
     /** For printing each line  - ADD the hook*/
-    uc_hook hk_code_print_instructions; 
+    uc_hook hk_code_print_instructions, hk_stack_access;
     my_uc_hook_add("hk_code_print_instructions",uc_golden_full, &hk_code_print_instructions, UC_HOOK_CODE, hook_code_print_instructions, current_run_state,1,0);
+    my_uc_hook_add("hk_stack_access",uc_golden_full, &hk_stack_access, UC_HOOK_MEM_READ | UC_HOOK_MEM_WRITE, hook_stack_access, current_run_state,
+                    binary_file_details->stack.address, binary_file_details->stack.address + binary_file_details->stack.size);
     my_uc_engine_start(uc_golden_full, current_run_state,0);     /** time one run **/
     /** For printing each line  - DELETE the hook*/
     my_uc_hook_del("hk_code_print_instructions",uc_golden_full, hk_code_print_instructions,current_run_state);
+    my_uc_hook_del("hk_stack_access",uc_golden_full, hk_stack_access, current_run_state);
 
 
     printf_output("Total instructions in faulting range:   %llu\n",current_run_state->instruction_count);    
     print_outputs(uc_golden_full, current_run_state);
+    fprintf(current_run_state->file_fprintf, "Stack Usage: -0x%" PRIx64 " +0x%" PRIx64 " (Start: 0x%" PRIx64 " -- 0x%" PRIx64 " -- End: 0x%" PRIx64 ")\n", 
+        binary_file_details->stack_start_address - current_run_state->min_sp_value, 
+        current_run_state->max_sp_value - binary_file_details->stack_start_address, 
+        current_run_state->max_sp_value,
+        binary_file_details->stack_start_address,
+        current_run_state->min_sp_value
+    );
     my_uc_close(uc_golden_full,current_run_state,"uc_golden_full");
 }
 
@@ -778,16 +788,19 @@ void get_on_with_it(const char *code_buffer, const size_t code_buffer_size, curr
     current_run_state_reset(current_run_state); // reset the counter etc.
     current_run_state->fault_rule.set=true;
     //Run the program
-    uc_hook hk_placebo;
+    uc_hook hk_placebo, hk_stack_access;
 
     my_uc_hook_add("hk_placebo",uc, &hk_placebo, UC_HOOK_CODE, hook_placebo, current_run_state,1,0);
+    my_uc_hook_add("hk_stack_access",uc, &hk_stack_access, UC_HOOK_MEM_READ | UC_HOOK_MEM_WRITE, hook_stack_access, current_run_state,
+        binary_file_details->stack.address, binary_file_details->stack.address + binary_file_details->stack.size);
     my_uc_engine_start(uc, current_run_state, current_run_state->max_instructions); 
     my_uc_hook_del("hk_placebo",uc, hk_placebo,current_run_state);
+    my_uc_hook_del("hk_stack_access",uc, hk_stack_access, current_run_state);
 
     switch (current_run_state->run_state)
     {
         case END_ADDRESS_AND_FAULTED_rs:
-            fprintf_output(f,"Run result: reached end address after faulting.\n");
+            fprintf_output(f,"Run result: reached end address after faulting.!!!\n");
             print_outputs(uc, current_run_state);
             break;
         case FAULTED_rs:
@@ -839,6 +852,13 @@ void get_on_with_it(const char *code_buffer, const size_t code_buffer_size, curr
             current_run_state->time_to_run,
             run_state_to_string(current_run_state->run_state));
     }
+    fprintf(f, "Stack Usage: -0x%" PRIx64 " +0x%" PRIx64 " (Start: 0x%" PRIx64 " -- 0x%" PRIx64 " -- End: 0x%" PRIx64 ")\n", 
+        binary_file_details->stack_start_address - current_run_state->min_sp_value, 
+        current_run_state->max_sp_value - binary_file_details->stack_start_address, 
+        current_run_state->max_sp_value,
+        binary_file_details->stack_start_address,
+        current_run_state->min_sp_value
+    );
     my_uc_close(uc,current_run_state,"get_on_with_it");  
 }
 
