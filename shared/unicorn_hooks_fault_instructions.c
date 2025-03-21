@@ -122,8 +122,11 @@ void hook_code_fault_it_instruction(uc_engine *uc, uint64_t address, uint64_t si
     }
 
     uint64_t new_address=address;
-    if ((binary_file_details->my_uc_arch == UC_ARCH_ARM || binary_file_details->my_uc_arch == UC_ARCH_ARM64) )
+    if ((binary_file_details->my_uc_arch == UC_ARCH_ARM || binary_file_details->my_uc_arch == UC_ARCH_ARM64) &&
+         binary_file_details->my_uc_mode == UC_MODE_THUMB)
+    {
         new_address++;     /* Add 1 for thumb */
+    }
 
     my_uc_ctl_remove_cache(uc, address, address);
 
@@ -217,8 +220,11 @@ void hook_lifespan_revert_instruction(uc_engine *uc, uint64_t address, uint64_t 
 
     /* Fixing for thumb */
     uint64_t new_address=address;
-    if ((binary_file_details->my_uc_arch == UC_ARCH_ARM || binary_file_details->my_uc_arch == UC_ARCH_ARM64))
+    if ((binary_file_details->my_uc_arch == UC_ARCH_ARM || binary_file_details->my_uc_arch == UC_ARCH_ARM64) &&
+         binary_file_details->my_uc_mode == UC_MODE_THUMB)
+    {
         new_address++;
+    }
 
     current_run_state->restart=true;
     current_run_state->restart_address=new_address; //includes the +1 if it's thumb
