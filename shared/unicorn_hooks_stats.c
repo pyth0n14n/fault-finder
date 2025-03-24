@@ -107,22 +107,25 @@ void hook_code_stats(uc_engine *uc, uint64_t address, uint64_t size, void *user_
     #ifdef DEBUG
         printf_debug("hook_code_stats - in faulting range. Address: 0x%" PRIx64 "\n",address);
     #endif
-    /// Save the address to the array 
-    current_run_state->line_details_array[num].address=address;
+    line_details_t* line = &current_run_state->line_details_array[num];
 
+    /// Save the address to the array 
+    line->address=address;
+
+    // TODO: should be judged with my_uc_mode
     if ((binary_file_details->my_uc_arch == UC_ARCH_ARM    || binary_file_details->my_uc_arch == UC_ARCH_ARM64)) 
     {
         // THIS IS SUCH A HACK! This is a thumb instruction so we need the first bit to be 1 if we restore the checkpoints.
         #ifdef DEBUG
             printf_debug("adding one to the address 0x%" PRIx64 "\n",address);
         #endif
-        current_run_state->line_details_array[num].address=address+1;
+        line->address=address+1;
     }
 
-    current_run_state->line_details_array[num].hit_count=address_hit(current_run_state->address_hit_counter,address);
-    current_run_state->line_details_array[num].size=size;
+    line->hit_count=address_hit(current_run_state->address_hit_counter,address);
+    line->size=size;
     // Only do this if we're going to use the checkpoints (it's very memory heavvvvy with lots of checkpoints)
-    if (current_run_state->start_from_checkpoint == 1 &&  current_run_state->line_details_array[num].checkpoint == true)
+    if (current_run_state->start_from_checkpoint == 1 &&  line->checkpoint == true)
     {
         save_checkpoint(uc,current_run_state, address, num);
     }
@@ -138,48 +141,68 @@ void hook_code_stats(uc_engine *uc, uint64_t address, uint64_t size, void *user_
         }   
         else
         {
+            // Enable "detail function"
+            cs_option(handle, CS_OPT_DETAIL, CS_OPT_ON);
+
             uint8_t* tmp=MY_STACK_ALLOC(size * sizeof(uint8_t));
             // Read the line of code (opcode)
-            if (!uc_mem_read(uc, address, tmp, size)) 
+            if (!uc_mem_read(uc, address, tmp, size))
             {
-                uint128_t current_registers_used=0;  // This will be the bit array for each of the registers
-
                 cs_insn *insn;
+
                 // Now disassemble this line using capstone and display the mnemonics
                 size_t count=cs_disasm(handle, tmp, size,0x1000,0, &insn);
                 if (count >0)
                 {
-                    char this_op_str[192];
-                    // Count should be 1 as we're only disassmbling one single instruction
-                    snprintf(current_run_state->line_details_array[num].op_mnemonic,OP_MNEMONIC_MAX_LENGTH,"%s",insn[0].mnemonic);
-                    convertToUppercase(insn[0].op_str);
-                    // Get the text from the op code - to see which registers are in there and being used at this instruction
-                    snprintf(this_op_str,192,"%s",insn[0].op_str);
-                    const char* reg;   
+                    // Judge src/dest regs
+                    // cs_regs regs_read, regs_write;
+                    uint16_t regs_read[12], regs_write[12];
+                    uint8_t read_count, write_count;
 
-                    current_registers_used=0;
-                    for (int i=0;i<MAX_REGISTERS;i++)
+                    if (cs_regs_access(handle, &insn[0],
+                        regs_read, &read_count,
+                        regs_write, &write_count) == 0)
                     {
-                        reg=register_name_from_int(i); 
-                        if (strstr(this_op_str,reg) != NULL)
-                        {
-                            // set the bit - the op code appears in this instruction
-                            set_bit(&current_registers_used,i);
+                        for (int i = 0; i < read_count; i++) {
+                            const char* regname = cs_reg_name(handle, regs_read[i]);
+                            uint64_t reg_index = register_int_from_name(regname);
+                            set_bit(&line->registers_src, reg_index);
+
+                            #ifdef DEBUG
+                            printf_debug("[READ reg] %s %lld\n", regname, reg_index);
+                            #endif
+                        }
+
+                        for (int i = 0; i < write_count; i++) {
+                            const char* regname = cs_reg_name(handle, regs_write[i]);
+                            uint64_t reg_index = register_int_from_name(regname);
+                            set_bit(&line->registers_dest, reg_index);
+
+                            #ifdef DEBUG
+                            printf_debug("[WRITE reg] %s %lld\n", regname, reg_index);
+                            #endif
                         }
                     }
+                    line->the_registers_used = line->registers_src | line->registers_dest;
+
                     #ifdef DEBUG
-                        printf_debug("current_registers_used %" PRIx64 "\n",current_registers_used);
+                    printf_debug("Instruction %llu uses:\n", num);
+                    printf_debug("  %s\t%s\n", insn[0].mnemonic, insn[0].op_str);
+                    printf_debug("  src  bitmap: 0x0" PRIx64 "%" PRIx64 "\n",
+                        (uint64_t)((line->registers_src >> 64) & 0xFFFFFFFFFFFFFFFF),
+                        (uint64_t)( line->registers_src & 0xFFFFFFFFFFFFFFFF));
+                    printf_debug("  dest bitmap: 0x%" PRIx64 "%" PRIx64 "\n",
+                        (uint64_t)((line->registers_dest >> 64) & 0xFFFFFFFFFFFFFFFF),
+                        (uint64_t) (line->registers_dest & 0xFFFFFFFFFFFFFFFF));
                     #endif
                 }
                 else
                 {
                     #ifdef DEBUG
-                        printf_debug("Unable to disassemble.  %" PRIx64 ". \n",current_registers_used);
+                        printf_debug("Unable to disassemble.\n");
                     #endif 
                 }
                 cs_free (insn,count);
-                current_run_state->line_details_array[num].the_registers_used=current_registers_used;
-
             } 
             else
             {
@@ -193,7 +216,7 @@ void hook_code_stats(uc_engine *uc, uint64_t address, uint64_t size, void *user_
     else
     {
             /******** Not using any disassembly START ************/
-            current_run_state->line_details_array[num].the_registers_used=0xFFFFFFFFFFFFFFFF;
+            line->the_registers_used=0xFFFFFFFFFFFFFFFF;
            /******** Not using any disassembly END ************/
     }
 }

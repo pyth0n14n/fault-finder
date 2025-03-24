@@ -392,7 +392,14 @@ run_list_t *parse(const char *filename)
                 current_instruction_range_fault = new_instruction_range_fault;
                 current_target_fault = NULL;
             }
-            else if ((strncmp(line, "Registers:", 10) == 0) || (strncmp(line, "Registers-force:", 15) == 0) || (strncmp(line, "Instruction:", 11) == 0) || (strncmp(line, "Flags:", 6) == 0) || (strncmp(line, "Instruction Pointer:", 20) == 0))
+            else if (
+                (strncmp(line, "Registers:", 10) == 0) ||
+                (strncmp(line, "Registers-force:", 15) == 0) ||
+                (strncmp(line, "Registers-source:", 17) == 0) ||
+                (strncmp(line, "Registers-destination:", 23) == 0) ||
+                (strncmp(line, "Instruction:", 11) == 0) ||
+                (strncmp(line, "Flags:", 6) == 0) ||
+                (strncmp(line, "Instruction Pointer:", 20) == 0))
             {
                 if (current_instruction_range_fault == NULL)
                 {
@@ -419,9 +426,20 @@ run_list_t *parse(const char *filename)
                     new_target_fault->target = reg_ft; // REGISTERS
                     new_target_fault->register_bit = get_registers_from_line(objects);
                     new_target_fault->force = false;
+                    new_target_fault->reg_filter_mode = eREG_FILTER_BOTH;  // Conventional Registers mode
                     if ((strncmp(line, "Registers-force", 15) == 0))
                     {
                         new_target_fault->force = true;
+                    }
+                    else if ((strncmp(line, "Registers-source:", 17) == 0))
+                    {
+                        new_target_fault->reg_filter_mode = eREG_FILTER_SRC_ONLY;
+                    }
+                    else if ((strncmp(line, "Registers-destination:", 23) == 0))
+                    {
+                        new_target_fault->reg_filter_mode = eREG_FILTER_DEST_ONLY;
+                    }
+                    else {
                     }
                 }
                 else if ((strncmp(line, "Instruction Pointer", 19) == 0))
@@ -439,6 +457,7 @@ run_list_t *parse(const char *filename)
                     fprintf(stderr, "Unable to find an object (register/instruction/instruction pointer)\n");
                     my_exit(-1);
                 }
+
                 if (current_target_fault != NULL)
                 {
                     // Attach this object (registers) to the end

@@ -80,6 +80,8 @@ void print_stats(current_run_state_t *current_run_state)
     #endif
 
     uint64_t register_count[MAX_REGISTERS]={0};
+    uint64_t register_count_read[MAX_REGISTERS]={0};
+    uint64_t register_count_write[MAX_REGISTERS]={0};
     //build the register counts
     for (uint64_t instr=1; instr < current_run_state->total_instruction_count+1; instr++)
     {
@@ -88,6 +90,12 @@ void print_stats(current_run_state_t *current_run_state)
             if (is_bit_set(current_run_state->line_details_array[instr].the_registers_used, r))
             {
                 register_count[r]++;
+                if (is_bit_set(current_run_state->line_details_array[instr].registers_src, r)) {
+                    register_count_read[r]++;
+                }
+                if (is_bit_set(current_run_state->line_details_array[instr].registers_dest, r)) {
+                    register_count_write[r]++;
+                }
             }
         }
     }
@@ -124,11 +132,12 @@ void print_stats(current_run_state_t *current_run_state)
     printf_output("Printing usage of registers: \n");
 
     //print the register info
+    printf("\tREG\t   #Used\t   #Read\t   #Write\n");
     for (int r=0; r < MAX_REGISTERS; r++) 
     {
         if (register_count[r]>0)
         {
-            printf("\t(%s):\t%8lli   \t\t \n",register_name_from_int(r),register_count[r]);
+            printf("\t(%s):\t%8lli\t%8lli\t%8lli\t\t \n",register_name_from_int(r),register_count[r],register_count_read[r],register_count_write[r]);
         }
     }
 }
@@ -304,6 +313,8 @@ void run_to_write_stats(current_run_state_t *current_run_state)
         // set to blank values for every line 
         current_run_state->line_details_array[i].the_registers_used=0;
         current_run_state->line_details_array[i].address=0;
+        current_run_state->line_details_array[i].registers_src=0;
+        current_run_state->line_details_array[i].registers_dest=0;
         current_run_state->line_details_array[i].hit_count=0;
         current_run_state->line_details_array[i].size=0;
         current_run_state->line_details_array[i].nearest_checkpoint=NO_CHECKPOINT;
@@ -643,7 +654,7 @@ void fault_it(current_run_state_t* current_run_state,run_list_t* run_list, uint6
         current_run_state->total_num_checkpoints=diff;
     }
 
-    // Run 2 - write the stats         
+    // Run 2 - write the stats
     current_run_state_reset(current_run_state); // reset the counter etc.
     current_run_state->run_mode=eSTATS_rm;
     run_to_write_stats(current_run_state);
@@ -925,17 +936,31 @@ void run_the_actual_fault( const char *code_buffer,const size_t code_buffer_size
                     }
                 case reg_ft:
                     {
-                        //LOOPING THROUGH REGISTERS            
+                        uint128_t the_registers_used = 0; // it's not target.the_register_used
+                        line_details_t* line = &current_run_state->line_details_array[workload.instruction];
+                        // Aggregate used registers depending on reg_filter_mode
+                        switch (current_fault->reg_filter_mode)
+                        {
+                            case eREG_FILTER_SRC_ONLY:
+                                the_registers_used = line->registers_src;
+                                break;
+                            case eREG_FILTER_DEST_ONLY:
+                                the_registers_used = line->registers_dest;
+                                break;
+                            case eREG_FILTER_BOTH:
+                            default:
+                                the_registers_used = line->registers_src | line->registers_dest;
+                                break;
+                        }
+
+                        //LOOPING THROUGH REGISTERS
                         for (int register_counter=0; register_counter < MAX_REGISTERS; register_counter++)
                         {
                             // The bit HAS to be set for the register(eg FAULT: register 7). 
                             // And then: either FORCE IT or - check that this register is used at this address.
                             if  (
-                                    (is_bit_set(current_fault->register_bit, register_counter))  
-                                    &&
-                                        (current_fault->force == true   
-                                        ||
-                                        is_bit_set(current_run_state->line_details_array[workload.instruction].the_registers_used, register_counter))
+                                    is_bit_set(current_fault->register_bit, register_counter) &&
+                                    (current_fault->force == true || is_bit_set(the_registers_used, register_counter))
                                 )
                             {
                                 // LOOPING THROUGH THE OPCODE FILTERS

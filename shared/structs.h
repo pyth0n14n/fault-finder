@@ -18,6 +18,7 @@
                     STARTED_FROM_CHECKPOINT_rs,
                     FAULTED_rs,EQUIVALENT_rs, TIMED_OUT_rs, 
                     ERRORED_rs, INTERRUPT_rs, HARD_STOP_rs,END_ADDRESS_rs,END_ADDRESS_AND_FAULTED_rs,MAX_INSTRUCTIONS_REACHED_rs, INSTRUCTION_ERROR_rs} run_state; 
+    typedef enum {eREG_FILTER_SRC_ONLY, eREG_FILTER_DEST_ONLY, eREG_FILTER_BOTH} reg_filter_mode_t;
 
     typedef struct _lifespan_t 
     {
@@ -62,6 +63,8 @@
         uint64_t nearest_checkpoint;
         uc_context* the_context;        
         uint128_t the_registers_used;
+        uint128_t registers_src;  // For register fault (apply fault before instruction execution)
+        uint128_t registers_dest; // For register fault (apply fault after instruction execution)
         uint64_t address;
         uint64_t size;
         uint64_t hit_count;
@@ -173,6 +176,7 @@
         fault_target target; // Currently: registers or instruction pointer or code
         bool force;  // will force the register to be faulted - even if it's not used in that instruction
         uint128_t register_bit;
+        reg_filter_mode_t reg_filter_mode;  // src or dest or both (conventional) for register fault
         opcode_filter_fault_t* opcode_filter_fault_head;
         struct _target_fault_t* next;
     } target_fault_t;
