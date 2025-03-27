@@ -111,7 +111,15 @@ void print_stats(current_run_state_t *current_run_state)
             if (binary_file_details->set_memory[i].format == hex_format)
             {
                 printf_output("Input %llu at address: 0x%" PRIx64 " provided:  ",i,binary_file_details->set_memory[i].address);
-                phex(stdout,binary_file_details->set_memory[i].byte_array, binary_file_details->set_memory[i].length);
+#define WRITE_MEM_PRINT_LEN (64UL)
+                if (binary_file_details->set_memory[i].length > WRITE_MEM_PRINT_LEN)
+                {
+                    phex(stdout,binary_file_details->set_memory[i].byte_array, WRITE_MEM_PRINT_LEN);
+                }
+                else
+                {
+                    phex(stdout,binary_file_details->set_memory[i].byte_array, binary_file_details->set_memory[i].length);
+                }
             }
         }
     }

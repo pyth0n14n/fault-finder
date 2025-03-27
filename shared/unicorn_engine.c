@@ -291,8 +291,15 @@ void uc_engine_set_memory_inputs(uc_engine *uc, current_run_state_t *current_run
         {
             new_address=binary_file_details->set_memory[i].address;
             fprintf_output(fd, "Writing memory input #%llu directly to address: 0x%016llx: ", i,new_address);
-            phex(fd,binary_file_details->set_memory[i].byte_array, binary_file_details->set_memory[i].length);
-
+#define WRITE_MEM_PRINT_LEN (16UL)
+            if (binary_file_details->set_memory[i].length > WRITE_MEM_PRINT_LEN)
+            {
+                phex(fd,binary_file_details->set_memory[i].byte_array, WRITE_MEM_PRINT_LEN);
+            }
+            else
+            {
+                phex(fd,binary_file_details->set_memory[i].byte_array, binary_file_details->set_memory[i].length);
+            }
         }
         else
         {
