@@ -290,6 +290,7 @@ void uc_engine_set_memory_inputs(uc_engine *uc, current_run_state_t *current_run
         if (binary_file_details->set_memory[i].type == address_memory)
         {
             new_address=binary_file_details->set_memory[i].address;
+#ifdef DEBUG
             fprintf_output(fd, "Writing memory input #%llu directly to address: 0x%016llx: ", i,new_address);
 #define WRITE_MEM_PRINT_LEN (16UL)
             if (binary_file_details->set_memory[i].length > WRITE_MEM_PRINT_LEN)
@@ -300,6 +301,7 @@ void uc_engine_set_memory_inputs(uc_engine *uc, current_run_state_t *current_run
             {
                 phex(fd,binary_file_details->set_memory[i].byte_array, binary_file_details->set_memory[i].length);
             }
+#endif
         }
         else
         {
@@ -339,7 +341,9 @@ void uc_engine_set_new_register_inputs(uc_engine *uc, current_run_state_t *curre
     {
         reg_tmp=binary_file_details->set_registers[i].reg;
         value=binary_file_details->set_registers[i].reg_value;
+#ifdef DEBUG
         fprintf(fd, " >> Writing register input #%llu directly to register: %s. Value: 0x%016llx\n", i, register_name_from_int(reg_tmp),value);
+#endif
 
         err=uc_reg_write(uc,uc_reg_from_int(reg_tmp), &value);
         if (err != UC_ERR_OK)

@@ -974,7 +974,8 @@ void get_memory_rewrite_offset(struct json_object* parsed_json)
 void load_configuration(const char* json_binary_filename)
 {
   FILE *fp = 0;
-#define BUFFER_SIZE (1048576UL)
+
+#define BUFFER_SIZE (5242880UL)
   // #define BUFFER_SIZE (65536UL)
     char buffer[BUFFER_SIZE]={0}; 
     struct json_object *parsed_json=NULL;
