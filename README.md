@@ -1,3 +1,11 @@
+# Update in this fork (25-07-30)
+
+- bugfix: Support ARM THUMB instruction in instruction skip model.
+- Support for specifying source/destination registers in register fault models.
+- Increased size of initialized data handled by "set memory" for rehosting.
+
+The following are the original README messages for FaultFinder.
+
 # FaultFinder
 
 Welcome to FaultFinder: lightning-fast, multi-architectural fault injection simulation
